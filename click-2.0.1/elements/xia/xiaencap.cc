@@ -29,7 +29,7 @@ XIAEncap::configure(Vector<String> &conf, ErrorHandler *errh)
     XIAPath src_path;
     XIAPath dst_path;
     int nxt = -1;
-    int last = -1;
+    int last = LAST_NODE_DEFAULT;
     uint8_t hlim = 250;
     int packet_offset = -1;
 	int chunk_offset = -1;

@@ -9,6 +9,8 @@
 
 CLICK_DECLS
 
+#define LAST_NODE_DEFAULT	0x7e
+
 // A read-only helper class for XIA headers.
 class XIAHeader { public:
     inline XIAHeader(const XIAHeader& r);

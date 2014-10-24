@@ -4,6 +4,7 @@
 
 #include <click/config.h>
 #include "xiaxidtypecounter.hh"
+#include <click/xiaheader.hh>
 #include <click/glue.hh>
 #include <click/error.hh>
 #include <click/handlercall.hh>
@@ -195,8 +196,10 @@ XIAXIDTypeCounter::match(Packet *p)
     uint32_t next_xid_type = -1;
     {
         int last = hdr->last;
-        if (last < 0)
-            last += hdr->dnode;
+        if (last == LAST_NODE_DEFAULT)
+            last = hdr->dnode - 1;
+ //       if (last < 0)
+ //           last += hdr->dnode;
         const struct click_xia_xid_edge* edge = hdr->node[last].edge;
         if (XIA_NEXT_PATH_ANNO(p) < CLICK_XIA_XID_EDGE_NUM) {
             const struct click_xia_xid_edge& current_edge = edge[XIA_NEXT_PATH_ANNO(p)];

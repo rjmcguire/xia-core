@@ -149,8 +149,10 @@ XCMP::processBadForwarding(Packet *p_in) {
 
     const struct click_xia* shdr = p_in->xia_header();
     int last = shdr->last;
-    if(last < 0)
-        last += shdr->dnode;
+    if (last == LAST_NODE_DEFAULT)
+        last = shdr->dnode - 1;
+ //   if(last < 0)
+ //       last += shdr->dnode;
     const struct click_xia_xid_node& lastnode = shdr->node[last];
     XID lnode(lastnode.xid);
 

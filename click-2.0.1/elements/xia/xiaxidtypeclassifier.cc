@@ -4,6 +4,7 @@
 
 #include <click/config.h>
 #include "xiaxidtypeclassifier.hh"
+#include <click/xiaheader.hh>
 #include <click/glue.hh>
 #include <click/error.hh>
 #include <click/confparse.hh>
@@ -126,8 +127,10 @@ XIAXIDTypeClassifier::match(Packet *p)
 
     {
         int last = hdr->last;
-        if (last < 0)
-            last += hdr->dnode;
+        if (last == LAST_NODE_DEFAULT)
+            last = hdr->dnode - 1;
+//        if (last < 0)
+//            last += hdr->dnode;
         const struct click_xia_xid_edge* edge = hdr->node[last].edge;
         if (XIA_NEXT_PATH_ANNO(p) < CLICK_XIA_XID_EDGE_NUM)
         {
