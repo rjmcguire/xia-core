@@ -98,7 +98,7 @@ class XARPTable : public Element { public:
     int lookup(XID xid, EtherAddress *eth, uint32_t poll_timeout_j);
     EtherAddress lookup(XID xid);
     XID reverse_lookup(const EtherAddress &eth);
-    int insert(XID xid, const EtherAddress &en, Packet **head = 0);
+    int insert(XID xid, bool fixed, const EtherAddress &en, Packet **head = 0);
     int append_query(XID xid, Packet *p);
     void clear();
 
@@ -147,6 +147,7 @@ class XARPTable : public Element { public:
 	XARPEntry *_hashnext;
 	EtherAddress _eth;
 	bool _known;
+    bool fixed;
 	click_jiffies_t _live_at_j;
 	click_jiffies_t _polled_at_j;
 	Packet *_head;
