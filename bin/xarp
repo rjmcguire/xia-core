@@ -1,0 +1,461 @@
+#!/usr/bin/python
+#ts=4
+#
+# Copyright 2011 Carnegie Mellon University
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+import os
+import sys
+import getopt
+import datetime
+import telnetlib
+
+APP_VERSION="0.9"
+TITLE="XIA Route version %s"
+
+# default Click host and port (can be changed on cmd line)
+HOST="localhost"
+PORT=7777
+
+# Minimum Click version required
+MAJOR=1
+MINOR=3
+#
+# class for managing command line configuration options
+#
+class Options:
+	""" xroute configuration options"""
+	def __init__(self):
+		self.__haveAction = False
+		self._host = HOST
+		self._port = PORT
+		self._printTables = False
+		self._add = []
+		self._remove = []
+		self._devices = []
+
+	#
+	# parse the command line so we can do stuff
+	#
+	def getOptions(self):
+		try:
+			# FIXME: make the option names more meaningful
+			shortopt = "hpnvif:d:a:r:"
+			opts, args = getopt.getopt(sys.argv[1:], shortopt, 
+				["help", "print", "names", "verbose",
+				"host=", "port=", "file=", "dump=", "add=", "remove=",
+				"device=", "type="])
+		except getopt.GetoptError, err:
+			# print	 help information and exit:
+			print str(err) # will print something like "option -a not recognized"
+			self.help()
+			sys.exit(2)
+
+		for o, a in opts:
+			if o in ("-h", "--help"):
+				self.help()
+			elif o in ("-p", "--print"):
+				self._printTables = True
+			elif o in ("-a", "--add"):
+				self._add.append(a)
+				self.__haveAction = True
+			elif o in ("-d", "--delete"):
+				self._remove.append(a)
+				self.__haveAction = True
+			elif o in ("--host"):
+				self._host = a
+			elif o in ("--port"):
+				self._port = a
+			elif o in ("--device"):
+				self._devices.append(a)
+			else:
+			 	assert False, "unhandled option"
+
+	#
+	# display helpful information
+	#
+	def help(self):
+		print """
+usage: xarp [-hpnvif:d:a:r:] [commands]
+where:
+  -h <host>        : specify the click host address
+  --host=<host>
+
+  --port=<port>    : specify the click control port
+
+  --device=<device>: only output info for the specified device (router0)
+	                 can be specified multiple times on the command line
+
+  -p               : print the route tables to stdout (default action)
+  --print
+
+  -a <entry>       : add a route, can be specified multipe times
+  --add=<entry>      device,port,hid,mac
+
+  -d <entry>       : remove a route, can be specified multipe times
+  --delete=<entry>   device,port,hid
+"""
+		sys.exit()
+	#
+	# check to see if the arp tables should be printed to the screen
+	#
+	def printTables(self):
+		p = False
+		if self._printTables == True or self.__haveAction == False:
+			p = True
+		return p
+	
+	#
+	# getter methods
+	#
+
+	def host(self):
+		return self._host
+	
+	def port(self):
+		return self._port
+
+	def addCommands(self):
+		return self._add
+	
+	def removeCommands(self):
+		return self._remove
+	
+	def devices(self):
+		return self._devices
+
+#
+# contains the configuration information
+# retrieved from click
+# data here is aquired by parsing the result of the flatconfig click command
+# currently we don't do a lot with it
+#
+class RouterConfig:
+	"""router configuration"""
+	
+	def __init__(self, flat):
+		self._devices = []
+		self._cards = []
+
+		entries = flat.split("\n")
+		for entry in entries:
+			entry = entry.strip()
+
+			# FIXME: should this be case insensitive?
+			if entry.find("/xarpq") > 0:
+				# hacky way of finding the devices that are configured
+#				print entry
+				if entry.find("-") == 0:
+					continue
+				if entry.find("xlc") == -1:
+					continue 
+				self.addDevice(entry)
+			else:
+				# get other config stuff out of here at some point
+				None
+	#
+	# found a device entry, add it to our device list if we dont' have it already
+	#
+	def addDevice(self, text):
+		parts = text.split("/")
+		dev = parts[0]
+		card = parts[1]
+
+		found = False
+		for d in self._devices:
+			if d == dev:
+				found = True
+		if found == False:
+			self._devices.append(dev)
+
+		# also add the linecard to the device's list
+		card = dev + "/" + card
+		if card.find("xlc") == -1:
+			return
+		found = False
+		for c in self._cards:
+			if c == card:
+				found = True
+		if found == False:
+			self._cards.append(card)
+
+	#
+	# getter methods
+	#
+	def devices(self):
+		return self._devices
+
+	def XIDs(self):
+		return self._xids
+
+	def aliases(self):
+		return self._xaliases
+
+	def getXID(self, alias):
+		xid = alias
+		if alias in self._xaliases:
+			xid = self._xaliases[alias]
+		return xid
+
+	def getAlias(self, xid):
+		xid = xid.lower()
+		alias = xid
+		if xid in self._xids:
+			alias = self._xids[xid]
+		return alias
+
+#
+# The main body of the xarp app
+# 
+class XArpApp:
+	connected = False	
+	csock = None
+	devices = []
+	types = []
+	
+	#
+	# the main logic of the xroute app
+	#
+	def run(self):
+		# get the command line options
+		self.options = Options()
+		self.options.getOptions()
+
+		# connect to click and parse the click configuration into our config object
+		self.connectToClick()
+		self.config = RouterConfig(self.readData("flatconfig"))
+
+		# if specified by the user, only get info for the specified devices (router0,...)
+		if (len(self.options.devices()) > 0):
+			self.devices = self.options.devices()
+		else:
+			self.devices = self.config.devices()
+
+		# do the individual add commands specfied on the cmd line
+		cmds = self.options.addCommands()
+		if len(cmds) > 0:
+			for cmd in cmds:
+				self.addEntry(cmd)
+
+		# do the individual delete commands specfied on the cmd line
+		cmds = self.options.removeCommands()
+		if len(cmds) > 0:
+			for cmd in cmds:
+				self.deleteRoute(cmd)
+
+		# if needed, print the click route tables to stdout
+		if self.options.printTables():
+			for device in self.devices:
+				print(self.getArpTable(device))
+
+		self.shutdown()
+
+	#
+	# print an error message and exit the app with an error
+	#
+	def errorExit(self, msg):
+		print msg
+		self.shutdown()
+		sys.exit(-1)
+
+	#
+	# get the ciick statuscode and message
+	# some operations get 2 lines of status message with the code on each
+	# and the second line is more useful, so the caller can specify if we should 
+	# die on error, or keep going and loop back for the 2nd line
+	#
+	def checkStatus(self, die):
+		rc = self.csock.read_until("\n")
+		rc = rc.strip()
+
+		# some result code lines are in the form of 'nnn msg' and some are nnn-msg'
+		# so ignore the odd character by slicing round it
+		code = int(rc[:3])
+		msg = rc[4:-1]
+		if (die and code != 200):
+			self.errorExit("error %d: %s" % (code, msg))
+		return code
+
+	#
+	# read the length of data sent by click so we can consume the right
+	# amout of text
+	#
+	def readLength(self):
+		text = self.csock.read_until("\n")
+		text.strip()
+		(data, length) = text.split()
+		if data != "DATA":
+			self.errorExit(tn, "error retreiving data length")
+		return int(length)
+
+	#
+	# connect to the click control socket
+	#
+	def connectToClick(self):
+		try:
+			self.csock = telnetlib.Telnet(self.options.host(), self.options.port())
+			self.connected = True
+
+			data = self.csock.read_until("\n")
+		except:
+			self.errorExit("Unable to connect to Click")
+
+		# make sure it's really click we're talking to
+		data = data.strip()
+		[name, ver] = data.split("/")
+		[major, minor] = ver.split(".")
+		if name != "Click::ControlSocket":
+			self.errorExit("Socket is not a click ControlSocket")
+		if int(major) < MAJOR or (int(major) == MAJOR and int(minor) < MINOR):
+			self.errorExit("Click version %d.%d or higher is required" % (MAJOR, MINOR))
+
+	#
+	# send a read command to click and return the resulting text
+	#
+	def readData(self, cmd):
+		self.csock.write("READ %s\n" % (cmd))
+		self.checkStatus(True)
+
+		length = self.readLength()
+		buf=""
+		while len(buf) < length:
+			buf += self.csock.read_some()
+		return buf
+
+	#
+	# send a write command to click and verify it worked OK
+	#
+	def writeData(self, cmd):
+		self.csock.write("WRITE %s\n" % (cmd))
+		code = self.checkStatus(False)
+
+		# the click write handler returns 2 lines of status on an error, and the
+		#second line contains a more useful message, so call it again
+		if code != 200:
+			self.checkStatus(True)
+
+	#
+	# print the specified route table to stdout
+	#
+	def printTable(self, card):
+		tfmt = "%s/xarpq.table"
+		cmd = tfmt % card
+		data = self.readData(cmd)
+		text = ""
+
+		lines = data.split("\n")
+		for line in lines:
+			if line != "":
+				text += line
+				text += "\n"
+
+		return text
+
+	#
+	# format the route table header and loop through the requested XID tables
+	#
+	def getArpTable(self, device):
+		text  = device
+		text += "\n"
+#		text += "%-5s %-45s %-13s %-8s NEXT HOP\n" % ("TYPE", "XID", "PORT", "FLAGS")
+		text +=  "-" * 79
+		text += "\n"
+
+		# only for the XID types requested by the user
+		for card in self.config._cards:
+			text += self.printTable(card)
+
+		return text
+
+	#
+	# send an individual delete route command to click
+	#
+	# only minor error checking is done here, click will do the rest of it
+	#
+	def deleteEntry(self, text):
+		try:
+			(device, port, hid) = text.split(",")
+		except:
+			self.errorExit("Invalid format for delete command")
+
+		found = False
+		for d in self.devices:
+			if d == device:
+				found = True
+		if found == False:
+			self.errorExit("device %s unknown" % (device));
+		if port >= 4:
+			print "invalid port number: %s" % port
+		if (hid == None or hid == ""):
+			self.errorExit("HID not specified")
+
+		cmd = "%s/xlc%s/xarpr.remove %s" % (device, port, hid)
+		self.writeData(cmd)
+		print "%s: deleted arp entry for %s" % (device, hid)
+
+
+	#
+	# send an individual arp entry to click
+	#
+	# only minor error checking is done here, click will do the rest of it
+	#
+	def addEntry(self, text):
+		parts = text.split(",")
+		if len(parts)  != 4:
+			self.errorExit("Invalid format for add entry command")
+
+		device = parts[0]
+		port = int(parts[1])
+		hid = parts[2]
+		mac = parts[3]
+			
+		found = False
+		for d in self.devices:
+			if d == device:
+				found = True
+		if found == False:
+			self.errorExit("device %s unknown" % (device));
+		if port > 4:
+			# hack for now till I figure out how to get correct number of ports
+			self.errorExit("attempting to add a route for a non-existant port: %d" % port)
+		if (hid == None or hid == ""):
+			self.errorExit("HID not specified")
+		if (mac == None or mac == ""):
+			self.errorExit("mac not specified")
+
+		cmd = "%s/xlc%d/xarpq.insert %s %s" % (device, port, hid, mac)
+		print cmd
+
+		self.writeData(cmd)
+		print "%s: added apr entry for %s: HID %s ETH %s" % (device, port, hid, mac)
+
+	#
+	# close the connection to click
+	#
+	def shutdown(self):
+		if (self.connected):
+			self.csock.write("quit\n")
+
+
+#
+# let's do this thing
+#
+def main():
+	print TITLE % (APP_VERSION)
+
+	xarp = XArpApp()
+	xarp.run()
+
+if __name__ == "__main__":
+	main()
