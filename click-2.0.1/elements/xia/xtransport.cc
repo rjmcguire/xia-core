@@ -2295,12 +2295,8 @@ void XTRANSPORT::XremoveChunk(unsigned short _sport)
 
 void XTRANSPORT::XputChunk(unsigned short _sport)
 {
-	
-	
 	click_chatter(">>putchunk message from API %d\n", _sport);
-	
-	
-	
+		
 	xia::X_Putchunk_Msg *x_putchunk_msg = xia_socket_msg.mutable_x_putchunk();
 //			int hasCID = x_putchunk_msg->hascid();
 	int32_t contextID = x_putchunk_msg->contextid();
@@ -2369,7 +2365,19 @@ void XTRANSPORT::XputChunk(unsigned short _sport)
 	ContentHeaderEncap  contenth(0, 0, pktPayload.length(), chunkSize, ContentHeader::OP_LOCAL_PUTCID,
 								 contextID, ttl, cacheSize, cachePolicy);
 	p = contenth.encap(just_payload_part);
-	p = xiah.encap(p, true);
+
+
+
+
+
+//	p = xiah.encap(p, true);
+contenth.update();
+xiah.set_plen(pktPayload.length() + contenth.hlen()); // XIA payload = transport header + transport-layer data
+
+p = xiah.encap(p, false);
+printf("payload:%d xiah:%d\n", pktPayload.length(), xiah.plen());
+
+
 
 	if (DEBUG)
 		click_chatter("sent packet to cache");
