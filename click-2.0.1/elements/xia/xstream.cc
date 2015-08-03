@@ -77,7 +77,7 @@ XStream::tcp_input(WritablePacket *p)
     {
     	click_chatter("Invalid header\n");
     }
-    printf("Tcp input with state %d\n", tp->t_state);
+    //printf("Tcp input with state %d\n", tp->t_state);
     get_transport()->_tcpstat.tcps_rcvtotal++; 
 
     /* we need to copy ti, since we need it later */
@@ -89,10 +89,10 @@ XStream::tcp_input(WritablePacket *p)
     ti.ti_urp = ntohs(tcph->th_urp);
     ti.ti_len = (uint16_t)(xiah.plen() - thdr.hlen());
 	   
-	printf("\t\t\ttcpinput flag is %d\n", ti.ti_flags);
-	printf("\t\t\ttcpinput seq is %d\n", (ti.ti_seq));
-	printf("\t\t\ttcpinput ack is %d\n", (ti.ti_ack));
-	printf("\t\t\ttcpinput data length is %d\n", (int)ti.ti_len);
+	//printf("\t\t\ttcpinput flag is %d\n", ti.ti_flags);
+	//printf("\t\t\ttcpinput seq is %d\n", (ti.ti_seq));
+	//printf("\t\t\ttcpinput ack is %d\n", (ti.ti_ack));
+	//printf("\t\t\ttcpinput data length is %d\n", (int)ti.ti_len);
     /*205 packet should be sane, skip tests */ 
     off = ti.ti_off << 2; 
     if (0&&off < sizeof(click_tcp)) {
@@ -107,7 +107,7 @@ XStream::tcp_input(WritablePacket *p)
 
     /*237*/
     optlen = off - sizeof(click_tcp);
-    printf("\t\t\ttcpinput option length is %d\n", (int)optlen);
+    //printf("\t\t\ttcpinput option length is %d\n", (int)optlen);
     optp = thdr.tcpopt();
     // optp   = (u_char *)iph + 40;
 
@@ -151,7 +151,7 @@ XStream::tcp_input(WritablePacket *p)
 		tp->snd_nxt == tp->snd_max) {
 
 			// We have entered the fast path
-			printf("tcpinput: Enter the fast path\n");
+			//printf("tcpinput: Enter the fast path\n");
 			// print_tcpstats(p, "tcp_input (fp)");
 
 			/* If last ACK falls within this segment's sequence numbers,
@@ -167,7 +167,7 @@ XStream::tcp_input(WritablePacket *p)
 					SEQ_LEQ(ti.ti_ack, tp->snd_max) &&
 					tp->snd_cwnd >= tp->snd_wnd) {
 
-					cout << "this is a pure ack for outstanding data" << endl;
+					////cout << "this is a pure ack for outstanding data" << endl;
 					//debug_output(VERB_TCP, "[%s] got pure ack: [%u]", SPKRNAME, ti.ti_ack);
 					++(get_transport()->_tcpstat.tcps_predack);
 					if (ts_present)
@@ -249,7 +249,7 @@ XStream::tcp_input(WritablePacket *p)
 		}
 
 	print_tcpstats(p, "tcp_input (sp)");
-	printf("Slow path begins\n");
+	//printf("Slow path begins\n");
     /* 438 TCP "Slow Path" processing begins here */
     WritablePacket *copy = NULL;
     if (ti.ti_len)
@@ -286,7 +286,7 @@ XStream::tcp_input(WritablePacket *p)
 			if (iss) {
 				tp->iss = iss; 
 			} else {
-				printf("tcpinput TCPS_LISTEN: You should pick a correct tcpiss\n");
+				//printf("tcpinput TCPS_LISTEN: You should pick a correct tcpiss\n");
 				tp->iss = click_random(0, 0xffffffff); /* TODO: sensible iss function */
 				//tp->iss = _tcp_iss(); /* suggested sensible iss function */
 			}
@@ -335,7 +335,7 @@ XStream::tcp_input(WritablePacket *p)
 			if (tiflags & TH_ACK && SEQ_GT(tp->snd_una, tp->iss)) {
 	    		get_transport() -> ChangeState(this, CONNECTED);
 				tcp_set_state(TCPS_ESTABLISHED);
-				printf("\t\t\t\tClient side 3way handshake is done.\n");
+				//printf("\t\t\t\tClient side 3way handshake is done.\n");
 				if (polling) {
 					// tell API we are writble now
 					get_transport()->ProcessPollEvent(port, POLLOUT);
@@ -417,7 +417,7 @@ XStream::tcp_input(WritablePacket *p)
     /* 635 646 */ 
     /* Determine if we need to trim the head off of an incoming segment */ 
     todrop = tp->rcv_nxt - ti.ti_seq; 
-    printf("tp -> rcv_nxt %d, tiseq %d\n", (int)tp->rcv_nxt, (int)ti.ti_seq);
+    //printf("tp -> rcv_nxt %d, tiseq %d\n", (int)tp->rcv_nxt, (int)ti.ti_seq);
 
 	// todrop is > 0 IF the incoming segment begins prior to the end of the last
 	// recieved segment (a.k.a. tp->rcv_nxt)
@@ -460,9 +460,9 @@ XStream::tcp_input(WritablePacket *p)
 		// 	get_transport()->_tcpstat.tcps_rcvpartduppack++;
 		// 	get_transport()->_tcpstat.tcps_rcvpartdupbyte += todrop;
 		// }
-		printf("becareful 465\n");
+		//printf("becareful 465\n");
 		if (copy != NULL) copy->pull(todrop);
-		printf("bad\n");
+		//printf("bad\n");
 		ti.ti_seq += todrop;
 		ti.ti_len -= todrop;
 		if (ti.ti_urp > todrop) { 
@@ -521,7 +521,7 @@ XStream::tcp_input(WritablePacket *p)
 		} else {
 			get_transport()->_tcpstat.tcps_rcvbyteafterwin += todrop;
 		}
-		printf("becareful 535\n");
+		//printf("becareful 535\n");
 		copy->pull(todrop); 
 		ti.ti_len -= todrop;
 		tiflags &= ~(TH_PUSH|TH_FIN);
@@ -550,7 +550,7 @@ XStream::tcp_input(WritablePacket *p)
 	 *	Close the tcb.
 	 */
 	if (tiflags & TH_RST) {
-		printf("551\n");
+		//printf("551\n");
 		switch (tp->t_state) {
 		case TCPS_SYN_RECEIVED:
 			tp->so_error = ECONNREFUSED;
@@ -588,7 +588,7 @@ XStream::tcp_input(WritablePacket *p)
 		if (SEQ_GT(tp->snd_una, ti.ti_ack) || SEQ_GT(ti.ti_ack, tp->snd_max)) {
 			goto dropwithreset;
 		}
-		printf("\t\t\t\tServer side 3way handshake is done.\n");
+		//printf("\t\t\t\tServer side 3way handshake is done.\n");
 		listening_sock->pending_connection_buf.push(this);
 
 		// push this socket into pending_connection_buf and let Xaccept handle that
@@ -843,7 +843,7 @@ dodata:
     	if (ti.ti_seq > tp->rcv_nxt && tp->t_state == TCPS_ESTABLISHED &&
     		_q_recv.is_empty()) 
     		goto drop;
-    	printf("becareful 843\n");
+    	//printf("becareful 843\n");
 		/* begin TCP_REASS */ 
 		if (ti.ti_seq == tp->rcv_nxt && 
 			tp->t_state == TCPS_ESTABLISHED) {
@@ -949,7 +949,7 @@ dropafterack:
 	/* Drop incoming segment and send an ACK. */
 	if (tiflags & TH_RST)
 		goto drop;
-	printf("becareful 913\n");
+	//printf("becareful 913\n");
 	if (copy != NULL) copy -> kill();
     if (p != NULL) p->kill();
 	tp->t_flags |= TF_ACKNOW;
@@ -976,7 +976,7 @@ drop:
     //debug_output(VERB_TCP, "[%s] tcpcon::input drop", SPKRNAME); 
 	if (copy != NULL) copy -> kill();
     if (p != NULL) p->kill();
-	printf("drop: 938\n");
+	//printf("drop: 938\n");
     return ;
 }
 
@@ -1024,8 +1024,8 @@ again:
     off = tp->snd_nxt - tp->snd_una; 
     win = min(tp->snd_wnd, tp->snd_cwnd); 
     flags = tcp_outflags[tp->t_state]; 
-    // printf("flags: %d\n", flags);
-    // printf("t_state %d\n", tp->t_state);
+    // //printf("flags: %d\n", flags);
+    // //printf("t_state %d\n", tp->t_state);
     /*80*/
     if (tp->t_force) { 
 		if (win == 0) { 
@@ -1085,7 +1085,7 @@ again:
 		if (2 * adv >= so_recv_buffer_size )
 			goto send;
     } else {
-    	printf("\t\t\t\twin <= 0!!!\n");
+    	//printf("\t\t\t\twin <= 0!!!\n");
 		//debug_output(VERB_TCPSTATS, "[%s] win: [%u]  (radv: [%u] rnxt: [%u]) [%u]", SPKRNAME, win, tp->rcv_adv, tp->rcv_nxt, tp->rcv_adv-tp->rcv_nxt);
 	}
 
@@ -1112,7 +1112,7 @@ again:
 
     /*222*/
 send:
-	// cout << "So send"<<endl;
+	// ////cout << "So send"<<endl;
     optlen = 0;
     hdrlen = sizeof(click_tcp);
 
@@ -1161,7 +1161,7 @@ send:
 		// Remove this clause after it's been debugged and timestamps are working properly
 		//debug_output(VERB_DEBUG, "[%s] timestamp: NOT setting timestamp", SPKRNAME);
 	}
-		// printf("1076\n");
+		// //printf("1076\n");
 		
     hdrlen += optlen; 
 
@@ -1192,25 +1192,25 @@ send:
 		// p = Packet::make(sizeof(click_ip) + sizeof(click_tcp) + optlen);
 		/* TODO: errorhandling */
     }
-		// printf("1107\n");
+		// //printf("1107\n");
 
     /*339*/
     if (flags & TH_FIN && tp->t_flags & TF_SENTFIN && 
 	    tp->snd_nxt == tp->snd_max) 
 	tp->snd_nxt -- ; 
-// printf("1113\n");
+// //printf("1113\n");
 	// @Harald: Is there a reason that the persist timer was not being checked?
 	if (len || (flags & (TH_SYN | TH_FIN)) || tp->t_timer[TCPT_PERSIST]) 
 		ti.th_seq = htonl(tp->snd_nxt); 
     else 
 		ti.th_seq = htonl(tp->snd_max);
-// printf("1119\n");
+// //printf("1119\n");
     ti.th_ack = htonl(tp->rcv_nxt);
-printf("1121+++++++%d\n",optlen);
+//printf("1121+++++++%d\n",optlen);
 	    if (optlen) {
-	    	// printf("1123\n");
+	    	// //printf("1123\n");
 			// memcpy((&ti + 1), opt, optlen); 
-			// printf("1125\n");
+			// //printf("1125\n");
 			ti.th_off = (sizeof(click_tcp) + optlen) >> 2;
 	    } 
     
@@ -1220,7 +1220,7 @@ printf("1121+++++++%d\n",optlen);
     /* receiver window calculations */ 
 
     /*TODO: silly window */
-		// printf("1132\n");
+		// //printf("1132\n");
 
 	// Correct window if it is too large or too small
     if (win > (long) TCP_MAXWIN << tp->rcv_scale)
@@ -1238,7 +1238,7 @@ printf("1121+++++++%d\n",optlen);
 		tp->snd_up = tp->snd_una; 
     }
     /* TODO: do we need to set p->length here ??? */
-		// printf("1150\n");
+		// //printf("1150\n");
 
     /*400*/
 	if (tp->t_force == 0  || tp->t_timer[TCPT_PERSIST] == 0) {
@@ -1275,7 +1275,7 @@ printf("1121+++++++%d\n",optlen);
 		tp->snd_max = tp->snd_nxt + len; 
 	}
 		// assert(0);
-	// printf("1189+%p\n",p);
+	// //printf("1189+%p\n",p);
 	// THE MAGIC MOMENT! Our beloved tcp data segment goes to be wrapped in IP and
 	// sent to its tcp-speaking destination :-)
 	//Add XIA headers
@@ -1292,24 +1292,24 @@ printf("1121+++++++%d\n",optlen);
 	int payload_length = 0;
 	if (p==NULL)
 	{
-		printf("a control packet is sent\n");
+		//printf("a control packet is sent\n");
 		p = WritablePacket::make(0, '\0', 0, 0);
 	} else {
 		payload_length = p -> length();
 	}
-	printf("\t\t\ttcpoutput with payload_length %d\n", payload_length);
+	//printf("\t\t\ttcpoutput with payload_length %d\n", payload_length);
 	tcp_payload = send_hdr->encap(p);
 	send_hdr -> update();
 	xiah.set_plen(payload_length + send_hdr->hlen()); // XIA payload = transport header + transport-layer data
 	tcp_payload = xiah.encap(tcp_payload, false);
 	delete send_hdr;
 	get_transport()->output(NETWORK_PORT).push(tcp_payload);
-	// printf("1207\n");
-	printf("\t\t\ttcpoutput flag is %d\n", ti.th_flags);
-	printf("\t\t\ttcpoutput seq is %d\n", ntohl(ti.th_seq));
-	printf("\t\t\ttcpoutput ack is %d\n", ntohl(ti.th_ack));
-	printf("\t\t\ttcpoutput off is %d\n", ti.th_off);
-	printf("\t\t\ttcpoutput optlen is %d\n", optlen);
+	// //printf("1207\n");
+	//printf("\t\t\ttcpoutput flag is %d\n", ti.th_flags);
+	//printf("\t\t\ttcpoutput seq is %d\n", ntohl(ti.th_seq));
+	//printf("\t\t\ttcpoutput ack is %d\n", ntohl(ti.th_ack));
+	//printf("\t\t\ttcpoutput off is %d\n", ti.th_off);
+	//printf("\t\t\ttcpoutput optlen is %d\n", optlen);
 	/* Data has been sent out at this point. If we advertised a positive window
 	 * and if this new window advertisement will result in us recieving a higher
 	 * sequence numbered segment than before this window announcement, we record
@@ -1324,14 +1324,14 @@ printf("1121+++++++%d\n",optlen);
     if (sendalot) {
 		goto again; 
 	}
-	// printf("1223\n");
+	// //printf("1223\n");
     return; 
 }
 
 void
 XStream::tcp_respond(tcp_seq_t ack, tcp_seq_t seq, int flags)
 {
-	printf("tcp_respond is called, there is bug sending a packet\n");
+	//printf("tcp_respond is called, there is bug sending a packet\n");
 	click_tcp th;
 
 	int win = min(so_recv_buffer_space(),  TCP_MAXWIN << tp->rcv_scale); 
@@ -1362,7 +1362,7 @@ XStream::tcp_respond(tcp_seq_t ack, tcp_seq_t seq, int flags)
 	xiah.set_src_path(src_path);
 
 	TransportHeaderEncap *send_hdr = TransportHeaderEncap::MakeTCPHeader(&th);
-	printf("a control packet is sent\n");
+	//printf("a control packet is sent\n");
 	WritablePacket *p =  WritablePacket::make(0, '\0', 0, 0);
 	WritablePacket *tcp_payload = send_hdr->encap(p);
 	send_hdr -> update();
@@ -1381,7 +1381,7 @@ XStream::so_recv_buffer_space() {
 
 void 
 XStream::fasttimo() {
-    	// printf("_fast_ticks");
+    	// //printf("_fast_ticks");
 
 	if ( tp->t_flags & TF_DELACK) { 
 		tp->t_flags &= ~TF_DELACK; 
@@ -1392,7 +1392,7 @@ XStream::fasttimo() {
 
 void 
 XStream::slowtimo() { 
-    	// printf("_slow_ticks");
+    	// //printf("_slow_ticks");
 
 	int i; 
 	//debug_output(VERB_TIMERS, "[%s] now: [%u] Timers: %s %d %s %d %s %d %s %d %s %d", 
@@ -1448,7 +1448,7 @@ XStream::tcp_timers (int timer) {
 		  }
 		  if ( tp->so_flags & SO_KEEPALIVE && 
 		       tp->t_state <= TCPS_CLOSE_WAIT) { 
-		  	  	printf("1449\n");
+		  	  	//printf("1449\n");
 		    if (tp->t_idle >= get_transport()->globals()->tcp_keepidle + 
 			get_transport()->globals()->tcp_maxidle) 
 			goto dropit;
@@ -1608,7 +1608,7 @@ XStream::tcp_drop(int err)
 	get_transport()->ReturnResult(port, &xsm);
 
 	if (polling) {
-		printf("checking poll event for %d from timer\n", port);
+		//printf("checking poll event for %d from timer\n", port);
 		get_transport()->ProcessPollEvent(port, POLLHUP);
 	}
 	tp->so_error = err; 
@@ -1643,7 +1643,7 @@ XStream::tcp_mss(u_int offer) {
 int 
 XStream::usrsend(WritablePacket *p)
 { 
-	printf("usrsend: I wanna send\n");
+	//printf("usrsend: I wanna send\n");
 	// Sanity Check: We should never recieve a packet after our tcp state is
 	// beyond CLOSE_WAIT.
     if (tp->t_state > TCPS_CLOSE_WAIT) { 
@@ -1674,12 +1674,12 @@ XStream::usrsend(WritablePacket *p)
 	// }
 
 	if (p) {
-		printf("usrsend: Push into _q_usr_input\n");
+		//printf("usrsend: Push into _q_usr_input\n");
 		WritablePacket *wp = NULL;
 		int remaining = (int)p -> length();
 		char buf[512];
 		memset(buf, 0, 512);
-		printf("the remaining is %d\n", remaining);
+		//printf("the remaining is %d\n", remaining);
 		// while (remaining > 0) {
 		// 	int size = remaining > 512 ? 512 : remaining;
 		// 	memcpy((void*)buf, (const void*)p->data(), size);
@@ -1688,7 +1688,7 @@ XStream::usrsend(WritablePacket *p)
 		// 		p -> pull(512);
 			retval = _q_usr_input.push(p);
 		// 	remaining -= 512; 
-		// 	printf("the remaining is %d\n", remaining);
+		// 	//printf("the remaining is %d\n", remaining);
 		// } 
 	}
 
@@ -1702,7 +1702,7 @@ XStream::usrsend(WritablePacket *p)
 void 
 XStream::usrclosed() 
 { 
-	printf("usrclosed is called \n");
+	//printf("usrclosed is called \n");
     switch (tp->t_state) { 
 		case TCPS_CLOSED:
 		case TCPS_LISTEN:
@@ -1725,7 +1725,7 @@ void
 XStream::usropen() 
 { 
 	if (tp->iss == 0) {
-		tp->iss = 0x11111; 
+		tp->iss = click_random(0, 0xffffffff); /* TODO: sensible iss function */
 		//debug_output(VERB_ERRORS, "Setting initial sequence to [%d], because it was 0", tp->iss);
 		// Setting a non-zero initial sequence number because I see some weird
 		// problems in wireshark when initial seq is 0
@@ -1734,11 +1734,11 @@ XStream::usropen()
     //debug_output(VERB_STATES,"[%s] usropen with state <%s>, initial seq num <%d> \n", 
     	// dispatcher()->name().c_str(), tcpstates[tp->t_state], tp->iss); 
     if (tp->t_state == TCPS_CLOSED || tp->t_state == TCPS_LISTEN) {
-    	cout << "we are good\n";
+    	////cout << "we are good\n";
 		tcp_set_state(TCPS_SYN_SENT);
 		tp->t_timer[TCPT_KEEP] = TCPTV_KEEP_INIT;
     }
-	cout << "we are good+1\n";
+	////cout << "we are good+1\n";
     tcp_output(); 
 }
 
@@ -1779,7 +1779,7 @@ XStream::_tcp_dooptions(u_char *cp, int cnt, uint8_t th_flags,
 
 	//debug_output(VERB_DEBUG, "[%s] tcp_dooption cnt [%u]\n", SPKRNAME, cnt);
 	for (; cnt > 0; cnt -= optlen, cp += optlen) { 
-		printf("1771\n");
+		//printf("1771\n");
 		opt = cp[0]; 
 		if (opt == TCPOPT_EOL) {
 			//debug_output(VERB_DEBUG, "b1");
@@ -1934,8 +1934,8 @@ void XStream::check_for_and_handle_pending_recv() {
 * @return  The number of bytes read from the buffer.
 */
 int XStream::read_from_recv_buf(XSocketMsg *xia_socket_msg) {
-printf("read_from_recv_buf\n");
-		// printf("<<< read_from_recv_buf: port=%u, recv_base=%d, next_recv_seqnum=%d, recv_buf_size=%d\n", tcp_conn->port, tcp_conn->recv_base, tcp_conn->next_recv_seqnum, tcp_conn->recv_buffer_size);
+//printf("read_from_recv_buf\n");
+		// //printf("<<< read_from_recv_buf: port=%u, recv_base=%d, next_recv_seqnum=%d, recv_buf_size=%d\n", tcp_conn->port, tcp_conn->recv_base, tcp_conn->next_recv_seqnum, tcp_conn->recv_buffer_size);
 	xia::X_Recv_Msg *x_recv_msg = xia_socket_msg->mutable_x_recv();
 	int bytes_requested = x_recv_msg->bytes_requested();
 	int bytes_returned = 0;
@@ -1954,12 +1954,12 @@ printf("read_from_recv_buf\n");
 
 		p->kill();
 
-//			printf("    port %u grabbing index %d, seqnum %d\n", tcp_conn->port, i%tcp_conn->recv_buffer_size, i);
+//			//printf("    port %u grabbing index %d, seqnum %d\n", tcp_conn->port, i%tcp_conn->recv_buffer_size, i);
 	}
 	x_recv_msg->set_payload(buf, bytes_returned); // TODO: check this: need to turn buf into String first?
 	x_recv_msg->set_bytes_returned(bytes_returned);
 
-//		printf(">>> read_from_recv_buf: port=%u, recv_base=%d, next_recv_seqnum=%d, recv_buf_size=%d\n", tcp_conn->port, tcp_conn->recv_base, tcp_conn->next_recv_seqnum, tcp_conn->recv_buffer_size);
+//		//printf(">>> read_from_recv_buf: port=%u, recv_base=%d, next_recv_seqnum=%d, recv_buf_size=%d\n", tcp_conn->port, tcp_conn->recv_base, tcp_conn->next_recv_seqnum, tcp_conn->recv_buffer_size);
 	return bytes_returned;
 }
 

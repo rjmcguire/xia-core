@@ -2036,16 +2036,16 @@ void XTRANSPORT::Xsocket(unsigned short _sport, xia::XSocketMsg *xia_socket_msg)
 	xia::X_Socket_Msg *x_socket_msg = xia_socket_msg->mutable_x_socket();
 	int sock_type = x_socket_msg->type();
 
-	printf("create %s socket %d\n", SocketTypeStr(sock_type), _sport);
+	//printf("create %s socket %d\n", SocketTypeStr(sock_type), _sport);
 	sock *sk = NULL;
 	switch (sock_type) {
 	case SOCK_STREAM: {
-		cout << "\t\t\t\tThis is a stream socket\n";
+		//cout << "\t\t\t\tThis is a stream socket\n";
 		sk = new XStream(this, _sport);
 		break;
 	}
 	case SOCK_DGRAM: {
-		cout << "\t\t\t\tThis is a datagram socket\n";
+		//cout << "\t\t\t\tThis is a datagram socket\n";
 		sk = new XDatagram(this, _sport);
 		break;
 	}
@@ -2152,7 +2152,7 @@ void XTRANSPORT::Xgetsockopt(unsigned short _sport, xia::XSocketMsg *xia_socket_
 
 void XTRANSPORT::Xbind(unsigned short _sport, xia::XSocketMsg *xia_socket_msg)
 {
-	cout << "XBIND IS CALLED" << endl;
+	//cout << "XBIND IS CALLED" << endl;
 	int rc = 0, ec = 0;
 
 	xia::X_Bind_Msg *x_bind_msg = xia_socket_msg->mutable_x_bind();
@@ -2293,7 +2293,7 @@ done:
 
 void XTRANSPORT::Xconnect(unsigned short _sport, xia::XSocketMsg *xia_socket_msg)
 {
-	cout << "XCONNECT IS CALLED" << endl;
+	//cout << "XCONNECT IS CALLED" << endl;
 	xia::X_Connect_Msg *x_connect_msg = xia_socket_msg->mutable_x_connect();
 	String dest(x_connect_msg->ddag().c_str());
 	XIAPath dst_path;
@@ -2375,7 +2375,7 @@ void XTRANSPORT::Xconnect(unsigned short _sport, xia::XSocketMsg *xia_socket_msg
 
 void XTRANSPORT::Xlisten(unsigned short _sport, xia::XSocketMsg *xia_socket_msg)
 {
-	cout << "XLISTEN IS CALLED" << endl;
+	//cout << "XLISTEN IS CALLED" << endl;
 	// we just want to mark the socket as listenening and return right away.
 
 	// FIXME: we should make sure we are already bound to a DAG
@@ -2400,7 +2400,7 @@ void XTRANSPORT::Xlisten(unsigned short _sport, xia::XSocketMsg *xia_socket_msg)
 
 void XTRANSPORT::XreadyToAccept(unsigned short _sport, xia::XSocketMsg *xia_socket_msg)
 {
-	cout << "XREADYTOACCEPT IS CALLED" << endl;
+	//cout << "XREADYTOACCEPT IS CALLED" << endl;
 	sock *sk = portToSock.get(_sport);
 
 	if (!sk->pending_connection_buf.empty()) {
@@ -2429,7 +2429,7 @@ void XTRANSPORT::XreadyToAccept(unsigned short _sport, xia::XSocketMsg *xia_sock
 
 void XTRANSPORT::Xaccept(unsigned short _sport, xia::XSocketMsg *xia_socket_msg)
 {
-	cout << "XACCEPT IS CALLED" << endl;
+	//cout << "XACCEPT IS CALLED" << endl;
 
 	int rc = 0, ec = 0;
 
@@ -2625,7 +2625,7 @@ void XTRANSPORT::Xupdaterv(unsigned short _sport, xia::XSocketMsg *xia_socket_ms
 // TODO: is it worth changing this to possibly return more than one event?
 void XTRANSPORT::ProcessPollEvent(unsigned short _sport, unsigned int flags_out)
 {
-	// cout << "ProcessPollEvent IS CALLED" <<endl;
+	// //cout << "ProcessPollEvent IS CALLED" <<endl;
 
 	// loop thru all the polls that are registered looking for the socket associated with _sport
 	for (HashTable<unsigned short, PollEvent>::iterator it = poll_events.begin(); it != poll_events.end(); it++) {
@@ -3075,7 +3075,7 @@ void XTRANSPORT::Xgetsockname(unsigned short _sport, xia::XSocketMsg *xia_socket
 
 void XTRANSPORT::Xsend(unsigned short _sport, xia::XSocketMsg *xia_socket_msg, WritablePacket *p_in)
 {
-	cout << "XSEND IS CALLED" << endl;
+	//cout << "XSEND IS CALLED" << endl;
 
 	int rc = 0, ec = 0;
 
@@ -3217,7 +3217,7 @@ void XTRANSPORT::Xsend(unsigned short _sport, xia::XSocketMsg *xia_socket_msg, W
 
 void XTRANSPORT::Xsendto(unsigned short _sport, xia::XSocketMsg *xia_socket_msg, WritablePacket *p_in)
 {
-	// cout << "XSENDTO IS CALLED" <<endl;
+	// //cout << "XSENDTO IS CALLED" <<endl;
 	int rc = 0, ec = 0;
 
 	xia::X_Sendto_Msg *x_sendto_msg = xia_socket_msg->mutable_x_sendto();
@@ -3326,7 +3326,7 @@ void XTRANSPORT::Xsendto(unsigned short _sport, xia::XSocketMsg *xia_socket_msg,
 
 void XTRANSPORT::Xrecv(unsigned short _sport, xia::XSocketMsg *xia_socket_msg)
 {
-	cout << "XRECV IS CALLED" << endl;
+	//cout << "XRECV IS CALLED" << endl;
 	sock *sk = portToSock.get(_sport);
 
 	if (sk->port != _sport) {
@@ -3377,7 +3377,7 @@ void XTRANSPORT::Xrecv(unsigned short _sport, xia::XSocketMsg *xia_socket_msg)
 // perhaps they should be combined
 void XTRANSPORT::Xrecvfrom(unsigned short _sport, xia::XSocketMsg *xia_socket_msg)
 {
-	// cout << "XRECVFROM IS CALLED" <<endl;
+	// //cout << "XRECVFROM IS CALLED" <<endl;
 
 	// FIXME: do we even need this check???
 	sock *sk = portToSock.get(_sport);
