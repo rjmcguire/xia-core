@@ -26,6 +26,7 @@
 #include "dagaddr.hpp"
 #include "dagaddr.h"
 #include <assert.h>
+#include "xftp.h"
 
 #include "Xkeys.h"
 
@@ -36,12 +37,6 @@
 // #define DAG  "RE %s %s %s"
 #define NAME "www_s.basicftp.aaa.xia"
 
-#undef XIA_MAXBUF
-#define XIA_MAXBUF 500
-
-#define MB(__mb) (KB(__mb) * 1024)
-#define KB(__kb) ((__kb) * 1024)
-#define CHUNKSIZE MB(1)
 #define NUM_CHUNKS	10
 #define REREQUEST 3
 

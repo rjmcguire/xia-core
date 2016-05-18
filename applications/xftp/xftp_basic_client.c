@@ -25,16 +25,13 @@
 #include "xcache.h"
 #include "dagaddr.hpp"
 #include "dagaddr.h"
+#include "xftp.h"
 #include <assert.h>
-
-#undef XIA_MAXBUF
-#define XIA_MAXBUF 500
 
 #define MAX_XID_SIZE 100
 #define VERSION "v1.0"
 #define TITLE "XIA Basic FTP client"
 #define NAME "www_s.basicftp.aaa.xia"
-#define CHUNKSIZE 1024
 #define REREQUEST 3
 
 #define NUM_CHUNKS	1
@@ -174,7 +171,7 @@ int getListedChunks(FILE *fd, char *url)
 	printf("Received url = %s\n", url);
 	token = strtok_r(url, " ", &saveptr);
 	while(token) {
-		char buf[1024 * 1024];
+		char buf[CHUNKSIZE];
 		int ret;
 		sockaddr_x addr;
 		printf("Calling XgetChunk\n");
@@ -187,7 +184,7 @@ int getListedChunks(FILE *fd, char *url)
 		g.print_graph();
 		printf("------------------------\n");
 
-		if((ret = XfetchChunk(&h, buf, 1024 * 1024, XCF_BLOCK, &addr, sizeof(addr))) < 0) {
+		if((ret = XfetchChunk(&h, buf, CHUNKSIZE, XCF_BLOCK, &addr, sizeof(addr))) < 0) {
 		 	die(-1, "XcacheGetChunk Failed\n");
 		}
 
